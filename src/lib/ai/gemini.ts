@@ -6,14 +6,15 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
  * environment variable becomes available later.
  */
 function getGenAI() {
-  const apiKey = process.env.GEMINI_API_KEY;
+  let apiKey = process.env.GEMINI_API_KEY;
   
-  if (!apiKey || apiKey === 'dummy-key') {
+  if (!apiKey || apiKey === 'dummy-key' || apiKey.trim() === '') {
     console.error('[Gemini] GEMINI_API_KEY is NOT defined or is set to default dummy value.');
-    // We return a client with the dummy key so it doesn't crash, 
-    // but the actual call will fail with a clear message.
-    return new GoogleGenerativeAI(apiKey || 'dummy-key');
+    return new GoogleGenerativeAI('dummy-key');
   }
+
+  // Trim the key to handle accidental whitespace or newlines from Vercel dashboard
+  apiKey = apiKey.trim();
 
   // Debugging: Log key presence and partial signature safely
   const keyLen = apiKey.length;
@@ -51,6 +52,10 @@ export async function geminiGenerateText(prompt: string, systemInstruction?: str
     return text;
   } catch (error: any) {
     console.error('[Gemini] Text generation failed:', error.message);
+    // Log more details if available
+    if (error.errorDetails) {
+      console.error('[Gemini] Error details:', JSON.stringify(error.errorDetails));
+    }
     throw error;
   }
 }
