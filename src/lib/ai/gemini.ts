@@ -2,37 +2,36 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 /**
  * Robustly retrieves the GoogleGenerativeAI client.
- * Does not cache a failed initialization to ensure it can recover if the 
- * environment variable becomes available later.
  */
 function getGenAI() {
   let apiKey = process.env.GEMINI_API_KEY;
   
-  if (!apiKey || apiKey === 'dummy-key' || apiKey.trim() === '') {
-    console.error('[Gemini] GEMINI_API_KEY is NOT defined or is set to default dummy value.');
-    return new GoogleGenerativeAI('dummy-key');
+  if (!apiKey || apiKey.trim() === '' || apiKey === 'dummy-key') {
+    console.error('[Gemini] ERROR: GEMINI_API_KEY is missing or empty in environment variables.');
+    // We must throw or return a placeholder that will fail with a better error
+    return new GoogleGenerativeAI('invalid-dummy-key');
   }
 
-  // Trim the key to handle accidental whitespace or newlines from Vercel dashboard
   apiKey = apiKey.trim();
+  
+  // Safe Debugging: Show first 3 and last 3 chars to help user verify
+  const start = apiKey.substring(0, 3);
+  const end = apiKey.substring(apiKey.length - 3);
+  console.log(`[Gemini] Client initialized. Key starts with "${start}", ends with "${end}", total length: ${apiKey.length}`);
 
-  // Debugging: Log key presence and partial signature safely
-  const keyLen = apiKey.length;
-  const start = apiKey.substring(0, 4);
-  const end = apiKey.substring(keyLen - 4);
-  console.log(`[Gemini] Initializing client with API Key: ${start}...${end} (length: ${keyLen})`);
+  if (apiKey.startsWith('ghp_')) {
+    console.error('[Gemini] WARNING: Your API key starts with "ghp_", which looks like a GitHub token. Please use a Gemini API key from Google AI Studio.');
+  } else if (!apiKey.startsWith('AIza')) {
+    console.warn('[Gemini] WARNING: Your API key does not start with "AIza", which is unusual for Google API keys.');
+  }
 
   return new GoogleGenerativeAI(apiKey);
 }
 
-/**
- * Returns a configured Gemini model instance.
- */
 export function getGeminiModel(modelName: string = "gemini-1.5-flash") {
   return getGenAI().getGenerativeModel({ model: modelName });
 }
 
-// Deprecated: Use getGeminiModel() instead.
 export const geminiModel = {
   generateContent: (prompt: any) => getGeminiModel().generateContent(prompt)
 };
@@ -47,36 +46,21 @@ export async function geminiGenerateText(prompt: string, systemInstruction?: str
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-    console.log('[Gemini] Text generation successful.');
-    return text;
+    return response.text();
   } catch (error: any) {
-    console.error('[Gemini] Text generation failed:', error.message);
-    // Log more details if available
+    console.error('[Gemini] API CALL FAILED:', error.message);
     if (error.errorDetails) {
-      console.error('[Gemini] Error details:', JSON.stringify(error.errorDetails));
+      console.error('[Gemini] Detailed Error:', JSON.stringify(error.errorDetails));
     }
     throw error;
   }
 }
 
-/**
- * Imagen integration.
- * Currently uses Pollinations AI as a high-quality fallback for the luxury aesthetic.
- */
 export async function geminiGenerateImage(prompt: string) {
-  console.log('[Gemini] Requesting image generation for prompt:', prompt);
-  
-  // Real Imagen integration usually requires Vertex AI.
-  // We use Pollinations AI as it produces high-end visuals compatible with the brand.
+  console.log('[Gemini] Image request (Pollinations Fallback):', prompt);
   const seed = Math.floor(Math.random() * 1000000);
   const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${seed}`;
-  
-  console.log('[Gemini] Image generated successfully:', imageUrl);
-
-  return {
-    url: imageUrl
-  };
+  return { url: imageUrl };
 }
 
 export const textGenerationTemplate = (niche: string, platform: string, subTheme: string) => {
