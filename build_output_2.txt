@@ -1,0 +1,22 @@
+
+> toxic-premium@0.1.0 build
+> next build
+
+▲ Next.js 16.2.6 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 7.5s
+  Running TypeScript ...
+Failed to type check.
+
+./src/app/api/generate-image/route.ts:22:42
+Type error: 'response.data' is possibly 'undefined'.
+
+  [90m20 |[0m     });
+  [90m21 |[0m
+[31m[1m>[0m [90m22 |[0m     [36mreturn[0m [33mNextResponse[0m.json({ imageUrl: response.data[[35m0[0m].url });
+  [90m   |[0m                                          [31m[1m^[0m
+  [90m23 |[0m   } [36mcatch[0m (error: any) {
+  [90m24 |[0m     console.error([32m'Error generating image:'[0m, error);
+  [90m25 |[0m     [36mreturn[0m [33mNextResponse[0m.json({ error: error.message || [32m'Internal Server Error'[0m }, { status..[35m.[0m
+Next.js build worker exited with code: 1 and signal: null

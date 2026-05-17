@@ -1,0 +1,31 @@
+
+> toxic-premium@0.1.0 build
+> next build
+
+▲ Next.js 16.2.6 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 7.5s
+  Running TypeScript ...
+  Finished TypeScript in 3.6s ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/9) ...
+  Generating static pages using 1 worker (2/9) 
+  Generating static pages using 1 worker (4/9) 
+  Generating static pages using 1 worker (6/9) 
+✓ Generating static pages using 1 worker (9/9) in 210ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /api/auth/callback
+├ ƒ /api/generate-image
+├ ƒ /api/generate-text
+├ ƒ /api/publish
+└ ƒ /api/trends
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
