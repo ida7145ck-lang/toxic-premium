@@ -20,7 +20,7 @@ function getGenAI() {
   const keyLen = apiKey.length;
   const start = apiKey.substring(0, 4);
   const end = apiKey.substring(keyLen - 4);
-  console.log(\`[Gemini] Initializing client with API Key: \${start}...\${end} (length: \${keyLen})\`);
+  console.log(`[Gemini] Initializing client with API Key: ${start}...${end} (length: ${keyLen})`);
 
   return new GoogleGenerativeAI(apiKey);
 }
@@ -70,7 +70,7 @@ export async function geminiGenerateImage(prompt: string) {
   // Real Imagen integration usually requires Vertex AI.
   // We use Pollinations AI as it produces high-end visuals compatible with the brand.
   const seed = Math.floor(Math.random() * 1000000);
-  const imageUrl = \`https://image.pollinations.ai/prompt/\${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=\${seed}\`;
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${seed}`;
   
   console.log('[Gemini] Image generated successfully:', imageUrl);
 
@@ -80,5 +80,5 @@ export async function geminiGenerateImage(prompt: string) {
 }
 
 export const textGenerationTemplate = (niche: string, platform: string, subTheme: string) => {
-  return \`Generate a \${niche} social media hook and caption for \${platform}. Theme: \${subTheme}. Tone: Premium, authoritative, and minimalist. Include 3 bullet points of actionable advice and 3 trending hashtags.\`;
+  return `Generate a ${niche} social media hook and caption for ${platform}. Theme: ${subTheme}. Tone: Premium, authoritative, and minimalist. Include 3 bullet points of actionable advice and 3 trending hashtags.`;
 };
