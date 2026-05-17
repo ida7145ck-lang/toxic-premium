@@ -1,4 +1,4 @@
-import { geminiModel } from '@/lib/ai/gemini';
+import { getGeminiModel } from '@/lib/ai/gemini';
 import Parser from 'rss-parser';
 
 const parser = new Parser();
@@ -90,7 +90,7 @@ export async function analyzeTrend(trend: Trend): Promise<AnalyzedTrend> {
     - [Hook 3]
     IMAGE_PROMPT: [Prompt text]`;
 
-    const model = geminiModel;
+    const model = getGeminiModel();
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {

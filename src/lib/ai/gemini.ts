@@ -1,17 +1,40 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const apiKey = process.env.GEMINI_API_KEY;
+let genAI: GoogleGenerativeAI | null = null;
 
-if (!apiKey) {
-  console.warn('GEMINI_API_KEY is not defined in environment variables');
+function getGenAI() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  
+  if (!apiKey) {
+    console.error('[Gemini] GEMINI_API_KEY is NOT defined in environment variables.');
+  } else {
+    // Only log that it's present, don't log the key
+    console.log('[Gemini] GEMINI_API_KEY is present (length: ' + apiKey.length + ')');
+  }
+
+  if (!genAI) {
+    genAI = new GoogleGenerativeAI(apiKey || 'dummy-key');
+  }
+  return genAI;
 }
 
-const genAI = new GoogleGenerativeAI(apiKey || 'dummy-key');
+/**
+ * Returns a configured Gemini model instance.
+ * Refactored to a function to ensure environment variables are read at runtime.
+ */
+export function getGeminiModel(modelName: string = "gemini-1.5-flash") {
+  return getGenAI().getGenerativeModel({ model: modelName });
+}
 
-export const geminiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// Deprecated: Use getGeminiModel() instead. 
+// Kept as a getter for backward compatibility if possible, but functions are preferred.
+export const geminiModel = {
+  generateContent: (prompt: any) => getGeminiModel().generateContent(prompt)
+};
 
 export async function geminiGenerateText(prompt: string, systemInstruction?: string) {
-  const model = genAI.getGenerativeModel({ 
+  console.log('[Gemini] Generating text...');
+  const model = getGenAI().getGenerativeModel({ 
     model: "gemini-1.5-flash",
     systemInstruction: systemInstruction,
   });
@@ -27,26 +50,19 @@ export async function geminiGenerateText(prompt: string, systemInstruction?: str
  * This function provides a structure for that integration.
  */
 export async function geminiGenerateImage(prompt: string) {
-  // Placeholder for Imagen implementation.
-  // In a production environment with Google Cloud, this would use Vertex AI SDK 
-  // or a fetch to the AI Platform endpoint.
+  console.log('[Gemini] Generating image with prompt:', prompt);
   
-  console.log('Generating image with prompt:', prompt);
+  // Real Imagen integration would require Google Cloud credentials and Vertex AI SDK.
+  // As a more realistic fallback that generates actual images, we use Pollinations AI.
+  // In a production environment with Google Cloud, this would be swapped with a real Vertex AI call.
   
-  // For now, we'll return a placeholder or simulate a response 
-  // if no real Imagen credentials/endpoint are provided.
-  // Ideally, this would be:
-  /*
-  const response = await fetch(`https://us-central1-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/us-central1/publishers/google/models/imagen-3.0-generate-001:predict`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ... })
-  });
-  */
+  const seed = Math.floor(Math.random() * 1000000);
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${seed}`;
   
-  // To keep the app "functional" for the demo/task:
+  console.log('[Gemini] Image generated (via Pollinations AI fallback):', imageUrl);
+
   return {
-    url: `https://placehold.co/1024x1024/000000/FFFFFF?text=${encodeURIComponent(prompt.substring(0, 30))}`
+    url: imageUrl
   };
 }
 

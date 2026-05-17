@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { geminiModel, textGenerationTemplate } from '@/lib/ai/gemini';
+import { getGeminiModel, textGenerationTemplate } from '@/lib/ai/gemini';
 
 export async function POST(request: Request) {
   try {
@@ -11,7 +11,8 @@ export async function POST(request: Request) {
 
     const prompt = textGenerationTemplate(niche, platform, subTheme);
 
-    const result = await geminiModel.generateContent(prompt);
+    const model = getGeminiModel();
+    const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
