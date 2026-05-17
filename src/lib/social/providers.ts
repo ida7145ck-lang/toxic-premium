@@ -21,7 +21,7 @@ export interface PublishResponse {
 }
 
 // Simulated delay for network requests
-const delay = (ms: number) => new Promise(resolve => setTimeout(ms, resolve));
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function publishToSocial(request: PublishRequest): Promise<PublishResponse> {
   console.log(`Publishing to ${request.platform}...`, request);

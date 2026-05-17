@@ -1,4 +1,4 @@
-import { openai } from '@/lib/ai/openai';
+import { geminiModel } from '@/lib/ai/gemini';
 import Parser from 'rss-parser';
 
 const parser = new Parser();
@@ -90,16 +90,15 @@ export async function analyzeTrend(trend: Trend): Promise<AnalyzedTrend> {
     - [Hook 3]
     IMAGE_PROMPT: [Prompt text]`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You are a master viral strategist for the Toxic Premium brand.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.7,
+    const model = geminiModel;
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+      },
     });
 
-    const content = completion.choices[0].message.content || '';
+    const content = result.response.text() || '';
     
     // Improved parsing
     const hooksMatch = content.match(/HOOKS:\s*([\s\S]*?)\s*IMAGE_PROMPT:/);

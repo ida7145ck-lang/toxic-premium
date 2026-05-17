@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { openai, textGenerationTemplate } from '@/lib/ai/openai';
+import { geminiModel, textGenerationTemplate } from '@/lib/ai/gemini';
 
 export async function POST(request: Request) {
   try {
@@ -11,17 +11,11 @@ export async function POST(request: Request) {
 
     const prompt = textGenerationTemplate(niche, platform, subTheme);
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'You are a premium content strategist for a high-end personal brand focused on money, motivation, stoicism, and toxic environments.' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 500,
-    });
+    const result = await geminiModel.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
 
-    return NextResponse.json({ result: completion.choices[0].message.content });
+    return NextResponse.json({ result: text });
   } catch (error: any) {
     console.error('Error generating text:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
