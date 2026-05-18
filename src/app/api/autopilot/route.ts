@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { geminiGenerateText } from '@/lib/ai/gemini';
+import { geminiGenerateText, geminiGenerateImage } from '@/lib/ai/gemini';
 import { publishToSocial } from '@/lib/social/providers';
 import { defaultAutopilotConfig } from '@/lib/social/autopilot';
 
@@ -7,6 +7,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const isManual = body.manual === true;
+    const clientApiKey = body.apiKey;
     
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -39,6 +40,12 @@ export async function POST(req: Request) {
       content = aiResponse || content;
     }
 
+    // 2. Generate matching 8K Visual
+    const imagePrompt = `Premium 3D render, luxury aesthetic, ${config.niche} theme, dominance and success, cinematic lighting, 8k. Context: ${content.substring(0, 100)}`;
+    const imageRes = await geminiGenerateImage(imagePrompt);
+    const mediaUrl = imageRes.url;
+
+    // 3. Publish to all connected platforms
     const platforms: any[] = ['facebook', 'instagram', 'tiktok', 'youtube'];
     
     const results = await Promise.all(platforms.map(async (platform) => {
@@ -46,7 +53,8 @@ export async function POST(req: Request) {
         platform,
         content,
         suggestedMusic,
-      });
+        mediaUrl
+      }, clientApiKey);
     }));
 
     return NextResponse.json({ 

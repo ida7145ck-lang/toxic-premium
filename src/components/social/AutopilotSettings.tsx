@@ -44,7 +44,7 @@ export default function AutopilotSettings() {
       const res = await fetch('/api/autopilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ manual: true })
+        body: JSON.stringify({ manual: true, apiKey: apiKey })
       });
       const data = await res.json();
       if (data.success) {

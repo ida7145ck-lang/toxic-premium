@@ -28,10 +28,10 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  * This function handles the bridge between the UI and real Social APIs.
  * It uses Ayrshare as the primary engine for multi-platform dominance.
  */
-export async function publishToSocial(request: PublishRequest): Promise<PublishResponse> {
+export async function publishToSocial(request: PublishRequest, apiKeyOverride?: string): Promise<PublishResponse> {
   console.log(`[Dominance Engine] Publishing to ${request.platform}...`);
   
-  const AYRSHARE_API_KEY = process.env.NEXT_PUBLIC_AYRSHARE_API_KEY || process.env.AYRSHARE_API_KEY;
+  const AYRSHARE_API_KEY = apiKeyOverride || process.env.NEXT_PUBLIC_AYRSHARE_API_KEY || process.env.AYRSHARE_API_KEY;
 
   if (!AYRSHARE_API_KEY || AYRSHARE_API_KEY === 'dummy-key') {
     console.warn(`[Simulation Mode] No Ayrshare API Key found. Simulating success for ${request.platform}.`);
