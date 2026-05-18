@@ -1,24 +1,30 @@
 import { NextResponse } from 'next/server';
-import { getGeminiModel, textGenerationTemplate } from '@/lib/ai/gemini';
+import { geminiGenerateText } from '@/lib/ai/gemini';
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const { niche, platform, subTheme } = await request.json();
+    const { prompt, systemInstruction } = await req.json();
 
-    if (!niche || !platform || !subTheme) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!prompt) {
+      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    const prompt = textGenerationTemplate(niche, platform, subTheme);
-
-    const model = getGeminiModel();
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-
-    return NextResponse.json({ result: text });
+    console.log('[API] Requesting text generation...');
+    const text = await geminiGenerateText(prompt, systemInstruction);
+    
+    return NextResponse.json({ text });
   } catch (error: any) {
-    console.error('Error generating text:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    console.error('[API Error] Text generation failed:', error.message);
+    
+    // If the error is specific to the API Key, let's make it very clear in the response
+    if (error.message.includes('API_KEY_INVALID') || error.message.includes('400')) {
+      return NextResponse.json({ 
+        error: 'The Google Gemini API Key is invalid. Please check your Vercel Environment Variables.',
+        details: error.message,
+        debug: 'Ensure your key is from aistudio.google.com and that the project has the Generative Language API enabled.'
+      }, { status: 401 });
+    }
+
+    return NextResponse.json({ error: 'Failed to generate text', details: error.message }, { status: 500 });
   }
 }
