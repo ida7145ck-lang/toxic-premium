@@ -25,12 +25,18 @@ export async function POST(req: Request) {
 
     console.log(`${isManual ? 'Manual' : 'Autopilot'} trigger at ${currentTime}`);
 
-    // 1. Generate High-End Narrative
-    const prompt = `Create a high-impact, premium social media post for the ${config.niche} niche. Focus on dominance, success, and dark luxury aesthetic. Suggest a specific trending audio style or track (e.g. "Phonk", "Deep House", "Interstellar theme style") that matches the intensity of the text. Return as JSON with "text" and "music" fields.`;
+    // 1. Generate High-End Quote Narrative
+    const prompt = `Create a viral "Dark Luxury" quote for the modern world. 
+    Themes: Stoicism, Making Money, and dealing with Toxic Environments/People.
+    Format: A powerful short quote followed by 3 brief bullet points of wisdom.
+    Style: Aggressive, Stoic, Elite.
+    Suggest a specific trending audio track (e.g. "Slowed Phonk", "Deep Techno", "Cinematic Dark").
+    Return as JSON with "text" and "music" fields.`;
+    
     const aiResponse = await geminiGenerateText(prompt);
     
-    let content = "Success is not an option, it is an obligation. #ToxicPremium";
-    let suggestedMusic = "Deep House / Phonk (Trending)";
+    let content = "The loudest in the room is the weakest. Build in silence. #Stoicism #Wealth #ToxicFree";
+    let suggestedMusic = "Slowed Phonk / Dark Cinematic";
 
     try {
       const cleanJson = aiResponse.replace(/```json|```/g, '').trim();
@@ -41,8 +47,8 @@ export async function POST(req: Request) {
       content = aiResponse || content;
     }
 
-    // 2. Generate matching 8K Visual
-    const imagePrompt = `Premium 3D render, luxury aesthetic, ${config.niche} theme, dominance and success, cinematic lighting, 8k. Context: ${content.substring(0, 100)}`;
+    // 2. Generate matching 8K Visual (Vertical Quote Card Style)
+    const imagePrompt = `Vertical 9:16 mobile wallpaper, Dark Luxury aesthetic, minimalist Stoic background, high-end texture, cinematic lighting, 8k. Atmosphere: Wealth and Focus. No text in image.`;
     const imageRes = await geminiGenerateImage(imagePrompt);
     const mediaUrl = imageRes.url;
 
