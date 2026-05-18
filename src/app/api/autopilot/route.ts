@@ -47,6 +47,10 @@ export async function POST(req: Request) {
       content = aiResponse || content;
     }
 
+    // Append Blueprint Link to Content
+    const blueprintLink = "https://the-silent-architect.vercel.app/?fbclid=IwVERDUAR3_y9leHRuA2FlbQIxMABzcnRjBmFwcF9pZAwzNTA2ODU1MzE3MjgAAR5UTUUAiQfW7jVRxj45-FsXGZHxrSG4upN4vxKDmjHPqce8lBT4H0zp8VIKeg_aem_zvCTHDLQs_DMt0sM26QiVw";
+    content += `\n\n💰 Get the Ebook Blueprint: How to make money and deal with toxic people:\n${blueprintLink}`;
+
     // 2. Generate matching 8K Visual (Vertical Quote Card Style)
     const imagePrompt = `Vertical 9:16 mobile wallpaper, Dark Luxury aesthetic, minimalist Stoic background, high-end texture, cinematic lighting, 8k. Atmosphere: Wealth and Focus. No text in image.`;
     const imageRes = await geminiGenerateImage(imagePrompt);
