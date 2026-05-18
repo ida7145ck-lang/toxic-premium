@@ -5,6 +5,7 @@ import HeroScene from '@/components/3d/HeroScene'
 import Header from '@/components/layout/Header'
 import CreativeStudio from '@/components/ai/CreativeStudio'
 import ViralDashboard from '@/components/social/ViralDashboard'
+import AutopilotSettings from '@/components/social/AutopilotSettings'
 
 export default function Home() {
   const [prefillHook, setPrefillHook] = useState('');
@@ -62,6 +63,13 @@ export default function Home() {
             </div>
             
             <ViralDashboard onSelectTrend={handleSelectTrend} />
+          </div>
+        </section>
+
+        {/* Autopilot Section */}
+        <section id="autopilot" className="relative z-10 py-32 px-4 bg-zinc-950 border-t border-zinc-900">
+          <div className="max-w-7xl mx-auto">
+            <AutopilotSettings />
           </div>
         </section>
 
