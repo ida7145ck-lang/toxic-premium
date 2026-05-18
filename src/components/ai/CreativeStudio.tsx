@@ -21,8 +21,9 @@ export default function CreativeStudio({ prefillHook, prefillPrompt, prefillNich
   const [loadingImage, setLoadingImage] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   
-  const { accounts } = useSocialAccounts();
-  const tiktokConnected = accounts.find(a => a.platform === 'tiktok')?.connected;
+  const { accounts, connectAccount } = useSocialAccounts();
+  const tiktokAccount = accounts.find(a => a.platform === 'tiktok');
+  const tiktokConnected = tiktokAccount?.connected;
 
   useEffect(() => {
     if (prefillHook) setTopic(prefillHook);
@@ -173,7 +174,7 @@ export default function CreativeStudio({ prefillHook, prefillPrompt, prefillNich
       <div className="p-6 rounded-3xl bg-gold-gradient-dark border border-toxic-gold/20 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl shadow-toxic-gold/5">
         <div className="flex items-center gap-4">
            <div className="flex -space-x-2">
-             <div className={`p-2 rounded-full border border-black bg-zinc-900 ${tiktokConnected ? 'text-toxic-green' : 'text-zinc-600'}`}>
+             <div className={`p-2 rounded-full border border-black bg-zinc-900 ${tiktokConnected ? 'text-toxic-green shadow-green-glow' : 'text-zinc-600'}`}>
                 <Music2 className="w-4 h-4" />
              </div>
              <div className="p-2 rounded-full border border-black bg-zinc-900 text-zinc-600">
@@ -192,12 +193,21 @@ export default function CreativeStudio({ prefillHook, prefillPrompt, prefillNich
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <button 
-            onClick={() => window.location.href = '#viral-trends'}
-            className="flex-1 md:flex-none px-6 py-3 rounded-xl border border-white/10 text-white font-bold text-sm hover:bg-white/5 transition-all"
-          >
-            Connect TikTok
-          </button>
+          {!tiktokConnected ? (
+            <button 
+              onClick={() => connectAccount('tiktok')}
+              className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-toxic-gold text-black font-bold text-sm hover:bg-white transition-all"
+            >
+              Connect TikTok
+            </button>
+          ) : (
+            <button 
+              disabled
+              className="flex-1 md:flex-none px-6 py-3 rounded-xl border border-toxic-green/30 text-toxic-green font-bold text-sm bg-toxic-green/5"
+            >
+              TikTok Connected
+            </button>
+          )}
           <button
             disabled={!generatedText || loadingText || loadingImage}
             onClick={handleQuickPublish}

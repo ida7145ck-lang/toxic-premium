@@ -12,46 +12,43 @@ export function useSocialAccounts() {
     { platform: 'youtube', username: 'Toxic Premium Official', connected: false },
   ]);
 
-  // Load from local storage if available (simulating persistence)
+  // Load from local storage
   useEffect(() => {
     const saved = localStorage.getItem('social_accounts');
-    let currentAccounts = accounts;
     if (saved) {
       try {
-        currentAccounts = JSON.parse(saved);
-        setAccounts(currentAccounts);
+        setAccounts(JSON.parse(saved));
       } catch (e) {
         console.error('Failed to load accounts', e);
       }
     }
 
-    // Handle redirect success
+    // Handle redirect success (backward compatibility)
     const connectedProvider = searchParams.get('connected');
     if (connectedProvider) {
-      const updated = currentAccounts.map(acc => 
-        acc.platform === connectedProvider ? { ...acc, connected: true } : acc
-      );
-      setAccounts(updated);
-      localStorage.setItem('social_accounts', JSON.stringify(updated));
-      // Clean up URL
+      connectAccount(connectedProvider as SocialPlatform);
       router.replace('/');
     }
   }, [searchParams, router]);
 
   const connectAccount = (platform: SocialPlatform) => {
-    const updated = accounts.map(acc => 
-      acc.platform === platform ? { ...acc, connected: true } : acc
-    );
-    setAccounts(updated);
-    localStorage.setItem('social_accounts', JSON.stringify(updated));
+    setAccounts(prev => {
+      const updated = prev.map(acc => 
+        acc.platform === platform ? { ...acc, connected: true } : acc
+      );
+      localStorage.setItem('social_accounts', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const disconnectAccount = (platform: SocialPlatform) => {
-    const updated = accounts.map(acc => 
-      acc.platform === platform ? { ...acc, connected: false } : acc
-    );
-    setAccounts(updated);
-    localStorage.setItem('social_accounts', JSON.stringify(updated));
+    setAccounts(prev => {
+      const updated = prev.map(acc => 
+        acc.platform === platform ? { ...acc, connected: false } : acc
+      );
+      localStorage.setItem('social_accounts', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return { accounts, connectAccount, disconnectAccount };

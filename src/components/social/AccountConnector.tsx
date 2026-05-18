@@ -2,7 +2,7 @@
 
 import { Check, Plus, X, Facebook, Instagram, Youtube, Music2 } from 'lucide-react';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
-import { SocialPlatform, getAuthUrl } from '@/lib/social/providers';
+import { SocialPlatform } from '@/lib/social/providers';
 
 const icons = {
   facebook: Facebook,
@@ -12,12 +12,7 @@ const icons = {
 };
 
 export default function AccountConnector() {
-  const { accounts, disconnectAccount } = useSocialAccounts();
-
-  const handleConnect = (platform: SocialPlatform) => {
-    // In a real app, this redirects to the provider's OAuth page
-    window.location.href = getAuthUrl(platform);
-  };
+  const { accounts, connectAccount, disconnectAccount } = useSocialAccounts();
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -45,7 +40,7 @@ export default function AccountConnector() {
                 </button>
               ) : (
                 <button 
-                  onClick={() => handleConnect(account.platform)}
+                  onClick={() => connectAccount(account.platform)}
                   className="p-1 rounded-full hover:bg-toxic-gold/20 text-zinc-600 hover:text-toxic-gold transition-colors"
                 >
                   <Plus className="w-4 h-4" />
