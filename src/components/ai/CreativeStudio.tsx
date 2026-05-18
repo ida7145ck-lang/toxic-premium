@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, Image as ImageIcon, Send, Share2, Loader2, Check, Copy, Music2, Instagram, Facebook, Youtube } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, Send, Share2, Loader2, Check, Copy, Music2, Instagram, Facebook, Youtube, Globe, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
 import PublishModal from '../social/PublishModal';
@@ -21,10 +21,13 @@ export default function CreativeStudio({ prefillHook, prefillPrompt, prefillNich
   const [loadingImage, setLoadingImage] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   
-  const { accounts, connectAccount } = useSocialAccounts();
+  // Quick Connect State
+  const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
+  const [quickHandle, setQuickHandle] = useState('');
+  
+  const { accounts, connectAccount, addCustomAccount } = useSocialAccounts();
   
   const connectedCount = accounts.filter(a => a.connected).length;
-  const allConnected = connectedCount === accounts.length;
 
   useEffect(() => {
     if (prefillHook) setTopic(prefillHook);
@@ -32,12 +35,12 @@ export default function CreativeStudio({ prefillHook, prefillPrompt, prefillNich
   }, [prefillHook, prefillNiche]);
   
   const getIcon = (platform: string) => {
-    switch(platform) {
+    switch(platform.toLowerCase()) {
       case 'tiktok': return <Music2 className="w-4 h-4" />;
       case 'instagram': return <Instagram className="w-4 h-4" />;
       case 'facebook': return <Facebook className="w-4 h-4" />;
       case 'youtube': return <Youtube className="w-4 h-4" />;
-      default: return null;
+      default: return <Globe className="w-4 h-4" />;
     }
   };
 
@@ -76,8 +79,20 @@ export default function CreativeStudio({ prefillHook, prefillPrompt, prefillNich
     }
   };
 
-  const handleQuickPublish = () => {
-    setIsPublishModalOpen(true);
+  const handleQuickConnect = () => {
+    if (!connectingPlatform || !quickHandle) return;
+    
+    if (connectingPlatform === 'Custom') {
+      const [p, h] = quickHandle.split(':');
+      if (p && h) {
+        addCustomAccount(p, h);
+      }
+    } else {
+      connectAccount(connectingPlatform, quickHandle);
+    }
+    
+    setConnectingPlatform(null);
+    setQuickHandle('');
   };
 
   return (
@@ -186,7 +201,7 @@ export default function CreativeStudio({ prefillHook, prefillPrompt, prefillNich
         <div className="flex items-center gap-4">
            <div className="flex -space-x-2">
              {accounts.map(acc => (
-               <div key={acc.platform} className={`p-2 rounded-full border border-black bg-zinc-900 transition-all ${acc.connected ? 'text-toxic-green shadow-green-glow z-10' : 'text-zinc-600'}`}>
+               <div key={`${acc.platform}-${acc.username}`} className={`p-2 rounded-full border border-black bg-zinc-900 transition-all ${acc.connected ? 'text-toxic-green shadow-green-glow z-10' : 'text-zinc-600'}`}>
                  {getIcon(acc.platform)}
                </div>
              ))}
@@ -200,20 +215,76 @@ export default function CreativeStudio({ prefillHook, prefillPrompt, prefillNich
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-          {accounts.map(acc => !acc.connected && (
-            <button 
-              key={acc.platform}
-              onClick={() => connectAccount(acc.platform)}
-              className="flex-none px-4 py-2 rounded-xl bg-toxic-gold/10 border border-toxic-gold/30 text-toxic-gold font-bold text-xs hover:bg-toxic-gold hover:text-black transition-all flex items-center gap-2"
-            >
-              {getIcon(acc.platform)}
-              Connect {acc.platform.charAt(0).toUpperCase() + acc.platform.slice(1)}
-            </button>
-          ))}
+          {!connectingPlatform ? (
+            <>
+              {accounts.map(acc => !acc.connected && (
+                <button 
+                  key={acc.platform}
+                  onClick={() => setConnectingPlatform(acc.platform)}
+                  className="flex-none px-4 py-2 rounded-xl bg-toxic-gold/10 border border-toxic-gold/30 text-toxic-gold font-bold text-xs hover:bg-toxic-gold hover:text-black transition-all flex items-center gap-2"
+                >
+                  {getIcon(acc.platform)}
+                  Connect {acc.platform.charAt(0).toUpperCase() + acc.platform.slice(1)}
+                </button>
+              ))}
+              <button 
+                onClick={() => setConnectingPlatform('Custom')}
+                className="flex-none px-4 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-400 font-bold text-xs hover:bg-zinc-700 hover:text-white transition-all flex items-center gap-2"
+              >
+                <Plus className="w-3 h-3" />
+                Add New
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center gap-2 animate-in slide-in-from-right-4">
+              {connectingPlatform === 'Custom' && (
+                <input
+                  type="text"
+                  placeholder="Platform Name"
+                  className="w-32 bg-zinc-950 border border-toxic-gold/30 rounded-lg px-3 py-2 text-xs text-white"
+                  value={quickHandle.includes(':') ? quickHandle.split(':')[0] : ''}
+                  onChange={(e) => {
+                    const handle = quickHandle.includes(':') ? quickHandle.split(':')[1] : quickHandle;
+                    setQuickHandle(`${e.target.value}:${handle}`);
+                  }}
+                />
+              )}
+              <input
+                type="text"
+                placeholder={connectingPlatform === 'Custom' ? "Handle" : `Enter @${connectingPlatform.toLowerCase()}...`}
+                className="w-48 bg-zinc-950 border border-toxic-gold/50 rounded-lg px-4 py-2 text-xs text-white outline-none focus:ring-1 focus:ring-toxic-gold transition-all"
+                value={connectingPlatform === 'Custom' ? (quickHandle.includes(':') ? quickHandle.split(':')[1] : quickHandle) : quickHandle}
+                onChange={(e) => {
+                  if (connectingPlatform === 'Custom') {
+                    const platform = quickHandle.includes(':') ? quickHandle.split(':')[0] : '';
+                    setQuickHandle(`${platform}:${e.target.value}`);
+                  } else {
+                    setQuickHandle(e.target.value);
+                  }
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleQuickConnect()}
+              />
+              <button 
+                onClick={handleQuickConnect}
+                className="p-2 bg-toxic-green text-black rounded-lg hover:scale-110 transition-transform"
+              >
+                <Check className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => {
+                  setConnectingPlatform(null);
+                  setQuickHandle('');
+                }} 
+                className="p-2 bg-zinc-800 text-white rounded-lg hover:bg-red-500 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
           
           <button
             disabled={!generatedText || loadingText || loadingImage || connectedCount === 0}
-            onClick={handleQuickPublish}
+            onClick={() => setIsPublishModalOpen(true)}
             className="flex-1 md:flex-none px-8 py-3 rounded-xl bg-white text-black font-extrabold text-sm flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/10 disabled:opacity-50 disabled:scale-100"
           >
             <Send className="w-4 h-4" />

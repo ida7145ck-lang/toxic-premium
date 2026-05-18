@@ -1,4 +1,4 @@
-export type SocialPlatform = 'facebook' | 'instagram' | 'tiktok' | 'youtube';
+export type SocialPlatform = 'facebook' | 'instagram' | 'tiktok' | 'youtube' | string;
 
 export interface SocialAccount {
   platform: SocialPlatform;

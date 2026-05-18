@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Send, Loader2, CheckCircle2, AlertCircle, Facebook, Instagram, Youtube, Music2 } from 'lucide-react';
+import { X, Send, Loader2, CheckCircle2, AlertCircle, Facebook, Instagram, Youtube, Music2, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocialAccounts } from '@/hooks/useSocialAccounts';
 import { publishToSocial, SocialPlatform } from '@/lib/social/providers';
@@ -13,11 +13,16 @@ interface PublishModalProps {
   mediaUrl?: string;
 }
 
-const icons = {
+const icons: Record<string, any> = {
   facebook: Facebook,
   instagram: Instagram,
   tiktok: Music2,
   youtube: Youtube,
+};
+
+const getIcon = (platform: string) => {
+  const Icon = icons[platform.toLowerCase()];
+  return Icon || Globe;
 };
 
 export default function PublishModal({ isOpen, onClose, content, mediaUrl }: PublishModalProps) {
@@ -86,7 +91,7 @@ export default function PublishModal({ isOpen, onClose, content, mediaUrl }: Pub
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 {connectedAccounts.map((account) => {
-                  const Icon = icons[account.platform];
+                  const Icon = getIcon(account.platform);
                   const isSelected = selectedPlatforms.includes(account.platform);
                   const result = results[account.platform];
 

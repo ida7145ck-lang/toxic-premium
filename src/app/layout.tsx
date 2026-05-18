@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Syncopate } from "next/font/google";
 import "./globals.css";
+import { SocialAccountsProvider } from "@/context/SocialAccountsContext";
 
 const inter = Inter({
   variable: "--font-body",
@@ -28,7 +29,11 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${syncopate.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-toxic-black text-white">{children}</body>
+      <body className="min-h-full flex flex-col bg-toxic-black text-white">
+        <SocialAccountsProvider>
+          {children}
+        </SocialAccountsProvider>
+      </body>
     </html>
   );
 }
