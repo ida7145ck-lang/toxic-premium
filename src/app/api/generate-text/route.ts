@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
-import { geminiGenerateText } from '@/lib/ai/gemini';
+import { geminiGenerateText, textGenerationTemplate } from '@/lib/ai/gemini';
 
 export async function POST(req: Request) {
   try {
-    const { prompt, systemInstruction } = await req.json();
+    const body = await req.json();
+    let { prompt, systemInstruction, niche, platform, subTheme } = body;
+
+    // Handle legacy format from frontend
+    if (!prompt && niche && platform) {
+      prompt = textGenerationTemplate(niche, platform, subTheme || 'General wisdom');
+    }
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
@@ -12,11 +18,11 @@ export async function POST(req: Request) {
     console.log('[API] Requesting text generation...');
     const text = await geminiGenerateText(prompt, systemInstruction);
     
-    return NextResponse.json({ text });
+    // Return 'result' to match frontend expectations
+    return NextResponse.json({ result: text });
   } catch (error: any) {
     console.error('[API Error] Text generation failed:', error.message);
     
-    // If the error is specific to the API Key, let's make it very clear in the response
     if (error.message.includes('API_KEY_INVALID') || error.message.includes('400')) {
       return NextResponse.json({ 
         error: 'The Google Gemini API Key is invalid. Please check your Vercel Environment Variables.',
