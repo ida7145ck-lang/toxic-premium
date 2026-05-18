@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AutopilotSettings() {
   const [isEnabled, setIsEnabled] = useState(false);
-  const [schedule] = useState(['07:00', '11:00', '15:00', '19:00', '22:00']);
+  const [schedule] = useState(['07:00', '11:00', '15:00', '19:00', '21:00']);
   const [isActivating, setIsActivating] = useState(false);
 
   const toggleAutopilot = async () => {
