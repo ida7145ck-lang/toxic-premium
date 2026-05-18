@@ -6,6 +6,34 @@ function getGenAI() {
   return new GoogleGenerativeAI(apiKey.trim());
 }
 
+async function fallbackGenerateText(prompt: string) {
+  try {
+    const response = await fetch(`https://text.pollinations.ai/prompt/${encodeURIComponent(prompt + " (Keep it short and premium)")}`);
+    const text = await response.text();
+    return text || "The elite don't wait for APIs. (Backup AI failed - check connection)";
+  } catch (e) {
+    return "The elite don't wait for APIs. They create their own path.";
+  }
+}
+
+export function getGeminiModel(modelName: string = "gemini-1.5-flash") {
+  const genAI = getGenAI();
+  if (!genAI) {
+    return {
+      generateContent: async (promptData: any) => {
+        let promptText = "";
+        if (typeof promptData === 'string') promptText = promptData;
+        else if (promptData.contents && promptData.contents[0].parts) {
+          promptText = promptData.contents[0].parts[0].text;
+        }
+        const text = await fallbackGenerateText(promptText);
+        return { response: { text: () => text } };
+      }
+    } as any;
+  }
+  return genAI.getGenerativeModel({ model: modelName });
+}
+
 export async function geminiGenerateText(prompt: string, systemInstruction?: string) {
   const genAI = getGenAI();
   
@@ -24,18 +52,7 @@ export async function geminiGenerateText(prompt: string, systemInstruction?: str
     }
   }
 
-  // SILENT FALLBACK: If Gemini fails OR if there is no key
   return fallbackGenerateText(prompt);
-}
-
-async function fallbackGenerateText(prompt: string) {
-  try {
-    const response = await fetch(`https://text.pollinations.ai/prompt/${encodeURIComponent(prompt + " (Keep it short and premium)")}`);
-    const text = await response.text();
-    return text || "The elite don't wait for APIs. (Backup AI failed - check connection)";
-  } catch (e) {
-    return "The elite don't wait for APIs. They create their own path.";
-  }
 }
 
 export async function geminiGenerateImage(prompt: string) {

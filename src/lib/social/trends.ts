@@ -103,7 +103,7 @@ export async function analyzeTrend(trend: Trend): Promise<AnalyzedTrend> {
     // Improved parsing
     const hooksMatch = content.match(/HOOKS:\s*([\s\S]*?)\s*IMAGE_PROMPT:/);
     const hooks = hooksMatch 
-      ? hooksMatch[1].split('\n').filter(l => l.trim().startsWith('-')).map(l => l.replace(/^-\s*/, '').trim())
+      ? hooksMatch[1].split('\n').filter((l: string) => l.trim().startsWith('-')).map((l: string) => l.replace(/^-\s*/, '').trim())
       : ['Focus on the signal, ignore the noise.', 'Master your environment or be mastered by it.'];
     
     const imagePromptMatch = content.match(/IMAGE_PROMPT:\s*([\s\S]*)$/);
