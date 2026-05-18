@@ -8,13 +8,32 @@ export default function AutopilotSettings() {
   const [isEnabled, setIsEnabled] = useState(false);
   const [schedule] = useState(['07:00', '11:00', '15:00', '19:00', '21:00']);
   const [isActivating, setIsActivating] = useState(false);
+  const [isForcing, setIsForcing] = useState(false);
 
   const toggleAutopilot = async () => {
     setIsActivating(true);
-    // Simulate API call to enable/disable background workers
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsEnabled(!isEnabled);
     setIsActivating(false);
+  };
+
+  const forcePostNow = async () => {
+    setIsForcing(true);
+    try {
+      const res = await fetch('/api/autopilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manual: true })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Manual post successful! Check your accounts.');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsForcing(false);
+    }
   };
 
   return (
@@ -37,29 +56,40 @@ export default function AutopilotSettings() {
           </div>
         </div>
 
-        <button 
-          onClick={toggleAutopilot}
-          disabled={isActivating}
-          className={`px-8 py-4 rounded-2xl font-bold text-sm flex items-center gap-3 transition-all transform active:scale-95 ${
-            isEnabled 
-            ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' 
-            : 'bg-white text-black hover:bg-toxic-gold hover:shadow-gold-glow'
-          }`}
-        >
-          {isActivating ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : isEnabled ? (
-            <>
-              <Pause className="w-5 h-5" />
-              DEACTIVATE AUTOPILOT
-            </>
-          ) : (
-            <>
-              <Play className="w-5 h-5" />
-              ACTIVATE AUTOPILOT
-            </>
-          )}
-        </button>
+        <div className="flex flex-col md:flex-row gap-3">
+          <button 
+            onClick={forcePostNow}
+            disabled={isForcing}
+            className="px-8 py-4 rounded-2xl bg-zinc-800 text-white font-bold text-sm border border-zinc-700 hover:border-toxic-gold transition-all flex items-center gap-2 disabled:opacity-50"
+          >
+            {isForcing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 text-toxic-gold" />}
+            FORCE POST NOW
+          </button>
+          
+          <button 
+            onClick={toggleAutopilot}
+            disabled={isActivating}
+            className={`px-8 py-4 rounded-2xl font-bold text-sm flex items-center gap-3 transition-all transform active:scale-95 ${
+              isEnabled 
+              ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' 
+              : 'bg-white text-black hover:bg-toxic-gold hover:shadow-gold-glow'
+            }`}
+          >
+            {isActivating ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : isEnabled ? (
+              <>
+                <Pause className="w-5 h-5" />
+                DEACTIVATE AUTOPILOT
+              </>
+            ) : (
+              <>
+                <Play className="w-5 h-5" />
+                ACTIVATE AUTOPILOT
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

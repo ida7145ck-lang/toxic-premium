@@ -5,25 +5,25 @@ import { defaultAutopilotConfig } from '@/lib/social/autopilot';
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json().catch(() => ({}));
+    const isManual = body.manual === true;
+    
     const now = new Date();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
     
-    // In a real app, we'd fetch settings from a database
     const config = defaultAutopilotConfig; 
     
-    // Check if current time is in schedule (exact minute match or within a window)
     const isScheduledTime = config.schedule.some(time => {
       const [h, m] = time.split(':');
       return parseInt(h) === now.getHours() && (now.getMinutes() >= 0 && now.getMinutes() <= 5);
     });
 
-    if (!isScheduledTime) {
+    if (!isScheduledTime && !isManual) {
       return NextResponse.json({ message: 'Not a scheduled time' }, { status: 200 });
     }
 
-    console.log(`Autopilot triggered at ${currentTime}`);
+    console.log(`${isManual ? 'Manual' : 'Autopilot'} trigger at ${currentTime}`);
 
-    // 1. Generate content using AI
     const prompt = `Create a high-impact, premium social media post for the ${config.niche} niche. Focus on dominance, success, and dark luxury aesthetic. Suggest a specific trending audio style or track (e.g. "Phonk", "Deep House", "Interstellar theme style") that matches the intensity of the text. Return as JSON with "text" and "music" fields.`;
     const aiResponse = await geminiGenerateText(prompt);
     
@@ -39,7 +39,6 @@ export async function POST(req: Request) {
       content = aiResponse || content;
     }
 
-    // 2. Publish to all connected platforms
     const platforms: any[] = ['facebook', 'instagram', 'tiktok', 'youtube'];
     
     const results = await Promise.all(platforms.map(async (platform) => {
@@ -52,6 +51,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ 
       success: true, 
+      trigger: isManual ? 'manual' : 'autopilot',
       time: currentTime,
       content,
       music: suggestedMusic,
