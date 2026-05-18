@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Play, Pause, Clock, Zap, Settings, ShieldCheck, Loader2, Key, ExternalLink, Check } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Play, Pause, Clock, Zap, Settings, ShieldCheck, Loader2, Key, ExternalLink, Check, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function AutopilotSettings() {
   const [isEnabled, setIsEnabled] = useState(false);
@@ -11,6 +10,7 @@ export default function AutopilotSettings() {
   const [isForcing, setIsForcing] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [isSaved, setIsSaved] = useState(false);
+  const [lastResults, setLastResults] = useState<any[] | null>(null);
 
   useEffect(() => {
     const savedKey = localStorage.getItem('AYRSHARE_API_KEY');
@@ -36,10 +36,11 @@ export default function AutopilotSettings() {
 
   const forcePostNow = async () => {
     if (!apiKey) {
-      alert('Please enter your Ayrshare API Key first to enable real posting.');
+      alert('CRITICAL: Ayrshare API Key is missing. Posting aborted.');
       return;
     }
     setIsForcing(true);
+    setLastResults(null);
     try {
       const res = await fetch('/api/autopilot', {
         method: 'POST',
@@ -47,14 +48,21 @@ export default function AutopilotSettings() {
         body: JSON.stringify({ manual: true, apiKey: apiKey })
       });
       const data = await res.json();
-      if (data.success) {
-        alert('Manual post successful! Your content is being processed by the Social APIs.');
+      
+      if (data.results) {
+        setLastResults(data.results);
+      }
+
+      if (data.allSuccessful) {
+        alert('VICTORY: Content published to ALL platforms.');
+      } else if (data.success) {
+        alert('PARTIAL SUCCESS: Content published to some platforms. Check individual status below.');
       } else {
-        alert('Error: ' + (data.error || 'Failed to post'));
+        alert('FAILURE: All platform attempts rejected. Check your Ayrshare dashboard or API Key.');
       }
     } catch (e) {
       console.error(e);
-      alert('Connection failed. Check your network.');
+      alert('CONNECTION ERROR: The Dominance Engine could not reach the server.');
     } finally {
       setIsForcing(false);
     }
@@ -70,7 +78,7 @@ export default function AutopilotSettings() {
           </div>
           <div>
             <h3 className="text-xl font-bold text-white uppercase tracking-tight">Social Engine Credentials</h3>
-            <p className="text-zinc-500 text-xs">Required for real-time publishing to TikTok, Instagram, and Facebook.</p>
+            <p className="text-zinc-500 text-xs">Ayrshare API Key is mandatory for real-time publishing.</p>
           </div>
         </div>
 
@@ -78,7 +86,7 @@ export default function AutopilotSettings() {
           <div className="flex-1 relative">
             <input 
               type="password"
-              placeholder="Enter Ayrshare API Key"
+              placeholder="Paste Ayrshare API Key here..."
               className="w-full bg-black/60 border border-zinc-800 rounded-xl px-4 py-4 text-sm text-white focus:outline-none focus:border-toxic-gold transition-all"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
@@ -97,12 +105,9 @@ export default function AutopilotSettings() {
             className="px-8 py-4 bg-toxic-gold text-black font-bold rounded-xl hover:bg-white transition-all flex items-center justify-center gap-2"
           >
             {isSaved ? <Check className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
-            {isSaved ? 'SAVED' : 'AUTHORIZE ENGINE'}
+            {isSaved ? 'AUTHORIZED' : 'SAVE CREDENTIALS'}
           </button>
         </div>
-        <p className="mt-4 text-[10px] text-zinc-600 uppercase tracking-widest font-bold">
-          Don't have a key? Get one at <a href="https://ayrshare.com" className="text-toxic-gold underline">Ayrshare.com</a> to enable real dominance.
-        </p>
       </div>
 
       <div className="p-8 rounded-3xl bg-zinc-900/50 border border-zinc-800 backdrop-blur-xl">
@@ -114,13 +119,8 @@ export default function AutopilotSettings() {
             <div>
               <h2 className="text-3xl font-bold text-white tracking-tight font-heading uppercase flex items-center gap-3">
                 Autopilot Core
-                {isEnabled && (
-                  <span className="text-[10px] bg-toxic-green/20 text-toxic-green px-2 py-1 rounded-full animate-pulse border border-toxic-green/30">
-                    Active
-                  </span>
-                )}
               </h2>
-              <p className="text-zinc-500 text-sm">Autonomous AI content generation and publishing engine.</p>
+              <p className="text-zinc-500 text-sm">Autonomous daily dominance engine.</p>
             </div>
           </div>
 
@@ -128,9 +128,9 @@ export default function AutopilotSettings() {
             <button 
               onClick={forcePostNow}
               disabled={isForcing}
-              className="px-8 py-4 rounded-2xl bg-zinc-800 text-white font-bold text-sm border border-zinc-700 hover:border-toxic-gold transition-all flex items-center gap-2 disabled:opacity-50"
+              className="px-8 py-4 rounded-2xl bg-white text-black font-bold text-sm hover:bg-toxic-gold transition-all flex items-center gap-2 disabled:opacity-50 group"
             >
-              {isForcing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 text-toxic-gold" />}
+              {isForcing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 text-black group-hover:scale-125 transition-transform" />}
               FORCE POST NOW
             </button>
             
@@ -140,25 +140,33 @@ export default function AutopilotSettings() {
               className={`px-8 py-4 rounded-2xl font-bold text-sm flex items-center gap-3 transition-all transform active:scale-95 ${
                 isEnabled 
                 ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700' 
-                : 'bg-white text-black hover:bg-toxic-gold hover:shadow-gold-glow'
+                : 'bg-toxic-green/20 border border-toxic-green/30 text-toxic-green hover:bg-toxic-green hover:text-black'
               }`}
             >
-              {isActivating ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : isEnabled ? (
-                <>
-                  <Pause className="w-5 h-5" />
-                  DEACTIVATE
-                </>
-              ) : (
-                <>
-                  <Play className="w-5 h-5" />
-                  ACTIVATE
-                </>
-              )}
+              {isEnabled ? 'DEACTIVATE ENGINE' : 'ACTIVATE ENGINE'}
             </button>
           </div>
         </div>
+
+        {/* Results Status Bar */}
+        {lastResults && (
+          <div className="mb-10 grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4">
+            {lastResults.map((res: any) => (
+              <div key={res.platform} className={`p-4 rounded-xl border flex flex-col gap-2 ${res.success ? 'bg-toxic-green/5 border-toxic-green/20' : 'bg-red-500/5 border-red-500/20'}`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold uppercase text-zinc-400">{res.platform}</span>
+                  {res.success ? <CheckCircle2 className="w-3 h-3 text-toxic-green" /> : <AlertCircle className="w-3 h-3 text-red-500" />}
+                </div>
+                <p className={`text-xs font-bold ${res.success ? 'text-white' : 'text-red-400'}`}>
+                  {res.success ? 'POSTED' : 'FAILED'}
+                </p>
+                {!res.success && res.error && (
+                  <p className="text-[8px] text-red-500 leading-tight line-clamp-2">{res.error}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
@@ -166,9 +174,9 @@ export default function AutopilotSettings() {
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                   <Clock className="w-3 h-3" />
-                  Aggressive Schedule
+                  POSTING SCHEDULE
                 </h3>
-                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-tighter">5 Posts Per Day</span>
+                <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-tighter">5X DAILY</span>
               </div>
               
               <div className="flex flex-wrap gap-3">
@@ -180,50 +188,42 @@ export default function AutopilotSettings() {
                   </div>
                 ))}
               </div>
-              
-              <p className="text-[11px] text-zinc-600 italic">
-                AI will automatically analyze current trends 15 minutes before each slot and prepare custom narratives for all connected accounts.
-              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-5 rounded-2xl bg-zinc-900/30 border border-zinc-800">
-                <Settings className="w-4 h-4 text-zinc-600 mb-3" />
-                <h4 className="text-white font-bold text-sm mb-1">Dynamic Niche Selection</h4>
-                <p className="text-xs text-zinc-500">Autopilot will rotate between Money, Motivation, and Success themes.</p>
+                <ShieldCheck className="w-4 h-4 text-toxic-green mb-3" />
+                <h4 className="text-white font-bold text-sm mb-1">Ayrshare Authenticated</h4>
+                <p className="text-xs text-zinc-500">Your accounts are bridged through Ayrshare's enterprise-grade API.</p>
               </div>
               <div className="p-5 rounded-2xl bg-zinc-900/30 border border-zinc-800">
-                <ShieldCheck className="w-4 h-4 text-zinc-600 mb-3" />
-                <h4 className="text-white font-bold text-sm mb-1">Safe-Mode Publishing</h4>
-                <p className="text-xs text-zinc-500">Every AI post is verified against community guidelines before being sent.</p>
+                <Settings className="w-4 h-4 text-toxic-gold mb-3" />
+                <h4 className="text-white font-bold text-sm mb-1">AI Post Verification</h4>
+                <p className="text-xs text-zinc-500">Each post is verified by Gemini AI for premium branding before publishing.</p>
               </div>
             </div>
           </div>
 
           <div className="p-6 rounded-2xl bg-gold-gradient-dark border border-toxic-gold/20 flex flex-col justify-between">
             <div>
-              <h3 className="text-white font-bold text-lg mb-2">Dominance Statistics</h3>
-              <p className="text-zinc-400 text-xs mb-6">Estimated weekly impact with Autopilot active.</p>
+              <h3 className="text-white font-bold text-lg mb-2">Impact Estimates</h3>
+              <p className="text-zinc-400 text-xs mb-6">Autonomous stats per week.</p>
               
               <div className="space-y-4">
                 <div className="flex justify-between items-end border-b border-white/5 pb-2">
-                  <span className="text-zinc-500 text-[10px] uppercase font-bold">Weekly Posts</span>
+                  <span className="text-zinc-500 text-[10px] uppercase font-bold">Posts</span>
                   <span className="text-white font-mono font-bold">140</span>
                 </div>
                 <div className="flex justify-between items-end border-b border-white/5 pb-2">
                   <span className="text-zinc-500 text-[10px] uppercase font-bold">Reach</span>
                   <span className="text-toxic-gold font-mono font-bold">~250k+</span>
                 </div>
-                <div className="flex justify-between items-end border-b border-white/5 pb-2">
-                  <span className="text-zinc-500 text-[10px] uppercase font-bold">Efficiency</span>
-                  <span className="text-toxic-green font-mono font-bold">99.8%</span>
-                </div>
               </div>
             </div>
 
             <div className="mt-8 p-4 rounded-xl bg-black/40 border border-white/5 text-center">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Next Post In</p>
-              <p className="text-2xl font-mono text-white font-bold">{isEnabled ? '02:44:12' : '--:--:--'}</p>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Status</p>
+              <p className={`text-2xl font-mono font-bold ${isEnabled ? 'text-toxic-green animate-pulse' : 'text-zinc-700'}`}>{isEnabled ? 'READY' : 'OFF'}</p>
             </div>
           </div>
         </div>

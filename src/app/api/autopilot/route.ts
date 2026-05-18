@@ -25,6 +25,7 @@ export async function POST(req: Request) {
 
     console.log(`${isManual ? 'Manual' : 'Autopilot'} trigger at ${currentTime}`);
 
+    // 1. Generate High-End Narrative
     const prompt = `Create a high-impact, premium social media post for the ${config.niche} niche. Focus on dominance, success, and dark luxury aesthetic. Suggest a specific trending audio style or track (e.g. "Phonk", "Deep House", "Interstellar theme style") that matches the intensity of the text. Return as JSON with "text" and "music" fields.`;
     const aiResponse = await geminiGenerateText(prompt);
     
@@ -49,16 +50,23 @@ export async function POST(req: Request) {
     const platforms: any[] = ['facebook', 'instagram', 'tiktok', 'youtube'];
     
     const results = await Promise.all(platforms.map(async (platform) => {
-      return await publishToSocial({
+      // Ayrshare typically requires a video for YouTube/TikTok. 
+      // We send the image URL and hope the platform/bridge handles it as a "community post" or converts it.
+      const res = await publishToSocial({
         platform,
         content,
         suggestedMusic,
         mediaUrl
       }, clientApiKey);
+      return { platform, ...res };
     }));
 
+    const allSuccessful = results.every(r => r.success);
+    const someSuccessful = results.some(r => r.success);
+
     return NextResponse.json({ 
-      success: true, 
+      success: someSuccessful, // Success if at least one platform worked
+      allSuccessful,
       trigger: isManual ? 'manual' : 'autopilot',
       time: currentTime,
       content,
