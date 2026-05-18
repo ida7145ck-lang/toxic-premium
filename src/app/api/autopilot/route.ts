@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateText } from '@/lib/ai/gemini';
+import { geminiGenerateText } from '@/lib/ai/gemini';
 import { publishToSocial } from '@/lib/social/providers';
 import { defaultAutopilotConfig } from '@/lib/social/autopilot';
 
@@ -24,19 +24,29 @@ export async function POST(req: Request) {
     console.log(`Autopilot triggered at ${currentTime}`);
 
     // 1. Generate content using AI
-    const prompt = `Create a high-impact, premium social media post for the ${config.niche} niche. Focus on dominance, success, and dark luxury aesthetic.`;
-    const aiResponse = await generateText({ prompt });
-    const content = aiResponse || "Success is not an option, it is an obligation. #ToxicPremium";
+    const prompt = `Create a high-impact, premium social media post for the ${config.niche} niche. Focus on dominance, success, and dark luxury aesthetic. Suggest a specific trending audio style or track (e.g. "Phonk", "Deep House", "Interstellar theme style") that matches the intensity of the text. Return as JSON with "text" and "music" fields.`;
+    const aiResponse = await geminiGenerateText(prompt);
+    
+    let content = "Success is not an option, it is an obligation. #ToxicPremium";
+    let suggestedMusic = "Deep House / Phonk (Trending)";
+
+    try {
+      const cleanJson = aiResponse.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      content = parsed.text || content;
+      suggestedMusic = parsed.music || suggestedMusic;
+    } catch (e) {
+      content = aiResponse || content;
+    }
 
     // 2. Publish to all connected platforms
-    // For now, we simulate getting connected platforms (real app would use a DB)
     const platforms: any[] = ['facebook', 'instagram', 'tiktok', 'youtube'];
     
     const results = await Promise.all(platforms.map(async (platform) => {
       return await publishToSocial({
         platform,
         content,
-        // In real autopilot, we'd also generate an image
+        suggestedMusic,
       });
     }));
 
@@ -44,6 +54,7 @@ export async function POST(req: Request) {
       success: true, 
       time: currentTime,
       content,
+      music: suggestedMusic,
       results 
     });
 

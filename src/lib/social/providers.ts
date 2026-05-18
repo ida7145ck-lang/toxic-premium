@@ -12,6 +12,7 @@ export interface PublishRequest {
   content: string; // Text or caption
   mediaUrl?: string; // Image or Video URL
   title?: string; // For YouTube
+  suggestedMusic?: string; // AI suggested trending audio
 }
 
 export interface PublishResponse {
