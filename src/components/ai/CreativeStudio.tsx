@@ -22,13 +22,24 @@ export default function CreativeStudio({ prefillHook, prefillPrompt, prefillNich
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   
   const { accounts, connectAccount } = useSocialAccounts();
-  const tiktokAccount = accounts.find(a => a.platform === 'tiktok');
-  const tiktokConnected = tiktokAccount?.connected;
+  
+  const connectedCount = accounts.filter(a => a.connected).length;
+  const allConnected = connectedCount === accounts.length;
 
   useEffect(() => {
     if (prefillHook) setTopic(prefillHook);
     if (prefillNiche) setNiche(prefillNiche);
   }, [prefillHook, prefillNiche]);
+  
+  const getIcon = (platform: string) => {
+    switch(platform) {
+      case 'tiktok': return <Music2 className="w-4 h-4" />;
+      case 'instagram': return <Instagram className="w-4 h-4" />;
+      case 'facebook': return <Facebook className="w-4 h-4" />;
+      case 'youtube': return <Youtube className="w-4 h-4" />;
+      default: return null;
+    }
+  };
 
   const generateText = async () => {
     setLoadingText(true);
@@ -174,47 +185,39 @@ export default function CreativeStudio({ prefillHook, prefillPrompt, prefillNich
       <div className="p-6 rounded-3xl bg-gold-gradient-dark border border-toxic-gold/20 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl shadow-toxic-gold/5">
         <div className="flex items-center gap-4">
            <div className="flex -space-x-2">
-             <div className={`p-2 rounded-full border border-black bg-zinc-900 ${tiktokConnected ? 'text-toxic-green shadow-green-glow' : 'text-zinc-600'}`}>
-                <Music2 className="w-4 h-4" />
-             </div>
-             <div className="p-2 rounded-full border border-black bg-zinc-900 text-zinc-600">
-                <Instagram className="w-4 h-4" />
-             </div>
-             <div className="p-2 rounded-full border border-black bg-zinc-900 text-zinc-600">
-                <Facebook className="w-4 h-4" />
-             </div>
+             {accounts.map(acc => (
+               <div key={acc.platform} className={`p-2 rounded-full border border-black bg-zinc-900 transition-all ${acc.connected ? 'text-toxic-green shadow-green-glow z-10' : 'text-zinc-600'}`}>
+                 {getIcon(acc.platform)}
+               </div>
+             ))}
            </div>
            <div>
              <p className="text-white font-bold text-sm">Ready to Dominate?</p>
              <p className="text-zinc-400 text-[10px] uppercase tracking-widest font-bold">
-               {tiktokConnected ? 'TikTok Connected' : 'Connect socials to post directly'}
+               {connectedCount > 0 ? `${connectedCount} Accounts Linked` : 'Connect socials to post directly'}
              </p>
            </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          {!tiktokConnected ? (
+        <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
+          {accounts.map(acc => !acc.connected && (
             <button 
-              onClick={() => connectAccount('tiktok')}
-              className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-toxic-gold text-black font-bold text-sm hover:bg-white transition-all"
+              key={acc.platform}
+              onClick={() => connectAccount(acc.platform)}
+              className="flex-none px-4 py-2 rounded-xl bg-toxic-gold/10 border border-toxic-gold/30 text-toxic-gold font-bold text-xs hover:bg-toxic-gold hover:text-black transition-all flex items-center gap-2"
             >
-              Connect TikTok
+              {getIcon(acc.platform)}
+              Connect {acc.platform.charAt(0).toUpperCase() + acc.platform.slice(1)}
             </button>
-          ) : (
-            <button 
-              disabled
-              className="flex-1 md:flex-none px-6 py-3 rounded-xl border border-toxic-green/30 text-toxic-green font-bold text-sm bg-toxic-green/5"
-            >
-              TikTok Connected
-            </button>
-          )}
+          ))}
+          
           <button
-            disabled={!generatedText || loadingText || loadingImage}
+            disabled={!generatedText || loadingText || loadingImage || connectedCount === 0}
             onClick={handleQuickPublish}
-            className="flex-1 md:flex-none px-10 py-3 rounded-xl bg-white text-black font-extrabold text-sm flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/10 disabled:opacity-50 disabled:scale-100"
+            className="flex-1 md:flex-none px-8 py-3 rounded-xl bg-white text-black font-extrabold text-sm flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/10 disabled:opacity-50 disabled:scale-100"
           >
             <Send className="w-4 h-4" />
-            PUBLISH TO CONNECTED
+            PUBLISH TO {connectedCount} {connectedCount === 1 ? 'ACCOUNT' : 'ACCOUNTS'}
           </button>
         </div>
       </div>
