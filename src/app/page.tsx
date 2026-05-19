@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react';
 import HeroScene from '@/components/3d/HeroScene'
 import Header from '@/components/layout/Header'
 import CreativeStudio from '@/components/ai/CreativeStudio'
+import VideoGenerator from '@/components/ai/VideoGenerator'
 import ViralDashboard from '@/components/social/ViralDashboard'
 import AutopilotSettings from '@/components/social/AutopilotSettings'
 
@@ -88,6 +89,20 @@ export default function Home() {
               prefillPrompt={prefillPrompt} 
               prefillNiche={prefillNiche} 
             />
+          </div>
+        </section>
+
+        {/* AI Video Generator Section */}
+        <section id="ai-video" className="relative z-10 py-32 px-4 bg-zinc-950 border-t border-zinc-900">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-20">
+              <h2 className="text-4xl md:text-6xl font-bold tracking-tighter text-white mb-6 uppercase font-heading">AI Video Reel</h2>
+              <p className="text-zinc-500 text-lg max-w-2xl mx-auto font-body">
+                Turn your thoughts into cinematic vertical reels instantly. Script, Image, Voice, and Video — all in one click.
+              </p>
+            </div>
+
+            <VideoGenerator />
           </div>
         </section>
       </Suspense>

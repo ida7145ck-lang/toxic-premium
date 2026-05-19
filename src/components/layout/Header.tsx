@@ -13,6 +13,9 @@ export default function Header() {
         <Link href="#ai-tools" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
           AI Tools
         </Link>
+        <Link href="#ai-video" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+          Video Creator
+        </Link>
         <Link href="#about" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">
           About
         </Link>
