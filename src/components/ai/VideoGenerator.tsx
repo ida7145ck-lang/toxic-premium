@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sparkles, Video, Loader2, Download, Play, Layers, Send, CheckCircle2, XCircle } from 'lucide-react';
+import { Sparkles, Video, Loader2, Download, Play, Layers, Send, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { useVideoAssembly } from '@/hooks/ai/useVideoAssembly';
 
 type PublishStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -21,7 +21,7 @@ export default function VideoGenerator() {
   const [generatedCaption, setGeneratedCaption] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  const { assembleVideo, isAssembling, assemblyProgress, videoBlob } = useVideoAssembly();
+  const { assembleVideo, isAssembling, assemblyProgress, videoBlob, error: assemblyError } = useVideoAssembly();
 
   const [publishStatus, setPublishStatus] = useState<PlatformStatus>({
     tiktok: 'idle',
@@ -34,11 +34,16 @@ export default function VideoGenerator() {
     if (videoBlob) {
       const url = URL.createObjectURL(videoBlob);
       setVideoUrl(url);
-      
-      // Cleanup previous URL if it exists
       return () => URL.revokeObjectURL(url);
     }
   }, [videoBlob]);
+
+  // Show assembly error
+  useEffect(() => {
+    if (assemblyError) {
+      setError(assemblyError);
+    }
+  }, [assemblyError]);
 
   const generateVideo = async () => {
     if (!prompt) return;
@@ -58,18 +63,18 @@ export default function VideoGenerator() {
       });
       const data = await response.json();
       
-      if (data.success) {
+      if (data.success && data.scenes && data.scenes.length > 0) {
         setScenes(data.scenes);
         setGeneratedCaption(data.caption);
         
         // 2. Assemble video client-side
         await assembleVideo(data.scenes);
       } else {
-        setError(data.error || 'Failed to generate video script');
+        setError(data.error || 'Failed to generate video script. Please try again.');
       }
     } catch (err) {
       console.error(err);
-      setError('An error occurred during video generation');
+      setError('An error occurred during video generation. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -80,41 +85,42 @@ export default function VideoGenerator() {
 
     let mediaUrlToPublish = videoUrl;
     
-    // Set all to loading
     setPublishStatus({
       tiktok: 'loading',
       instagram: 'loading',
       youtube: 'loading'
     });
 
-    // If it's a blob URL, we need to upload it to a public URL for Ayrshare
+    // Upload blob to tmpfiles.org for public URL
     if (videoUrl.startsWith('blob:')) {
       try {
         const blob = await fetch(videoUrl).then(r => r.blob());
         const formData = new FormData();
-        formData.append('file', blob, 'video.webm');
+        formData.append('file', blob, 'toxic-reel.webm');
         
-        // Use tmpfiles.org for temporary public hosting (free, no key needed, allows multiple downloads)
         const uploadRes = await fetch('https://tmpfiles.org/api/v1/upload', {
           method: 'POST',
           body: formData
         });
         const uploadData = await uploadRes.json();
-        if (uploadData.status === 'success') {
-          // Convert https://tmpfiles.org/XXXX/file.webm to https://tmpfiles.org/dl/XXXX/file.webm
+        
+        if (uploadData.status === 'success' && uploadData.data?.url) {
           mediaUrlToPublish = uploadData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
         } else {
-          throw new Error('Failed to upload video for publishing');
+          throw new Error('Upload failed');
         }
       } catch (err) {
         console.error('Upload error:', err);
-        setError('Failed to upload video for publishing. Ayrshare requires a public URL. Please download and post manually.');
+        setError('Failed to upload video for publishing. Please try downloading and posting manually.');
         setPublishStatus({ tiktok: 'error', instagram: 'error', youtube: 'error' });
         return;
       }
     }
 
-    const caption = generatedCaption || `Build the exit quietly. The Silent Architect is a blueprint for escaping burnout, pressure, and dependency — with strategy, not chaos. Link in bio. #${niche.toLowerCase()} #SilentArchitect #ToxicPremium #Success #Mindset #Ambition`;
+    // THE CORRECT CAPTION - exactly as you specified
+    const caption = `Build the exit quietly. The Silent Architect is a blueprint for escaping burnout, pressure, and dependency — with strategy, not chaos. Link in bio.
+
+#${niche.toLowerCase().replace(' ', '')} #SilentArchitect #ToxicPremium #Success #Mindset #Ambition`;
 
     const platforms: (keyof PlatformStatus)[] = ['tiktok', 'instagram', 'youtube'];
 
@@ -127,7 +133,7 @@ export default function VideoGenerator() {
             platform,
             content: caption,
             mediaUrl: mediaUrlToPublish,
-            title: prompt // For YouTube
+            title: prompt
           }),
         });
         
@@ -144,7 +150,6 @@ export default function VideoGenerator() {
       }
     };
 
-    // Publish to all simultaneously
     await Promise.all(platforms.map(p => publishToPlatform(p)));
   };
 
@@ -161,6 +166,12 @@ export default function VideoGenerator() {
   const hasPublished = Object.values(publishStatus).some(s => s === 'success' || s === 'error');
   const isProcessing = loading || isAssembling;
 
+  const getStatusMessage = () => {
+    if (loading) return 'Generating script and AI images...';
+    if (isAssembling) return `Assembling video (${assemblyProgress}%)...`;
+    return '';
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -170,7 +181,7 @@ export default function VideoGenerator() {
             <div className="p-2 rounded-lg bg-white/10">
               <Video className="w-5 h-5 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-white tracking-tight">AI Reel Creator (Client-Side)</h3>
+            <h3 className="text-xl font-bold text-white tracking-tight">AI Reel Creator</h3>
           </div>
 
           <div className="space-y-4">
@@ -206,30 +217,35 @@ export default function VideoGenerator() {
               className="w-full py-4 bg-white text-black font-extrabold rounded-xl text-sm hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-white/5"
             >
               {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-              {loading ? 'GENERATING SCRIPT...' : isAssembling ? `ASSEMBLING VIDEO (${assemblyProgress}%)` : 'CREATE AI REEL'}
+              {isProcessing ? getStatusMessage() : 'CREATE AI REEL'}
             </button>
             
             {error && (
-              <p className="text-red-500 text-xs font-medium text-center">{error}</p>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <p className="text-red-500 text-xs font-medium">{error}</p>
+              </div>
             )}
           </div>
 
           {videoUrl && (
             <div className="pt-6 border-t border-zinc-800 space-y-4">
               <div className="p-4 rounded-xl bg-black/60 border border-zinc-800 space-y-2">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Target Caption</label>
-                <p className="text-zinc-400 text-xs italic leading-relaxed">
-                  {generatedCaption || "Build the exit quietly..."}
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Caption (exact as specified)</label>
+                <p className="text-zinc-400 text-xs italic leading-relaxed whitespace-pre-wrap">
+                  Build the exit quietly. The Silent Architect is a blueprint for escaping burnout, pressure, and dependency — with strategy, not chaos. Link in bio.
+                  {'\n\n'}
+                  #toxic #SilentArchitect #ToxicPremium #Success #Mindset #Ambition
                 </p>
               </div>
 
               <button
                 onClick={publishToAll}
-                disabled={isPublishing}
-                className="w-full py-4 bg-toxic-gold text-black font-extrabold rounded-xl text-sm hover:bg-toxic-gold-light transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-toxic-gold/10"
+                disabled={isPublishing || !videoUrl}
+                className="w-full py-4 bg-gradient-to-r from-toxic-gold to-yellow-500 text-black font-extrabold rounded-xl text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-xl shadow-toxic-gold/20"
               >
                 {isPublishing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                {isPublishing ? 'PUBLISHING...' : 'PUBLISH TO ALL CHANNELS'}
+                {isPublishing ? 'PUBLISHING TO SOCIALS...' : 'PUBLISH TO ALL CHANNELS'}
               </button>
 
               {hasPublished && (
@@ -273,12 +289,11 @@ export default function VideoGenerator() {
                 src={videoUrl} 
                 controls 
                 className="w-full h-full object-cover"
-                autoPlay
               />
-              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
                 <a 
                   href={videoUrl} 
-                  download="luxury-reel.webm" 
+                  download="toxic-premium-reel.webm" 
                   className="p-2 bg-white text-black rounded-full shadow-xl"
                 >
                   <Download className="w-4 h-4" />
@@ -303,8 +318,8 @@ export default function VideoGenerator() {
                 <h3 className="text-white font-bold">Video Preview</h3>
                 <p className="text-zinc-500 text-sm italic">
                   {isProcessing 
-                    ? loading ? "Generating cinematic script and assets..." : `Assembling your vertical reel in-browser (${assemblyProgress}%)...`
-                    : "Once generated, your 9:16 vertical luxury reel will appear here."}
+                    ? getStatusMessage()
+                    : "Your 9:16 vertical luxury reel will appear here after generation."}
                 </p>
               </div>
             </div>

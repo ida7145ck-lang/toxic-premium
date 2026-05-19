@@ -93,7 +93,9 @@ export async function POST(req: NextRequest) {
       return { ...scene, imageUrl, audioUrl };
     });
 
-    const caption = `Build the exit quietly. The Silent Architect is a blueprint for escaping burnout, pressure, and dependency — with strategy, not chaos. Link in bio. #${niche.toLowerCase()} #SilentArchitect #ToxicPremium #Success #Mindset #Ambition ${additionalHashtags}`;
+    const caption = `Build the exit quietly. The Silent Architect is a blueprint for escaping burnout, pressure, and dependency — with strategy, not chaos. Link in bio.
+
+#${niche.toLowerCase().replace(' ', '')} #SilentArchitect #ToxicPremium #Success #Mindset #Ambition`;
 
     return NextResponse.json({ 
       success: true, 
