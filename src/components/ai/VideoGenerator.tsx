@@ -1,7 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Sparkles, Video, Loader2, Download, Play, Layers } from 'lucide-react';
+import { Sparkles, Video, Loader2, Download, Play, Layers, Send, CheckCircle2, XCircle } from 'lucide-react';
+
+type PublishStatus = 'idle' | 'loading' | 'success' | 'error';
+
+interface PlatformStatus {
+  tiktok: PublishStatus;
+  instagram: PublishStatus;
+  youtube: PublishStatus;
+}
 
 export default function VideoGenerator() {
   const [prompt, setPrompt] = useState('');
@@ -9,23 +17,34 @@ export default function VideoGenerator() {
   const [loading, setLoading] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [scenes, setScenes] = useState<any[]>([]);
+  const [generatedCaption, setGeneratedCaption] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  const [publishStatus, setPublishStatus] = useState<PlatformStatus>({
+    tiktok: 'idle',
+    instagram: 'idle',
+    youtube: 'idle'
+  });
 
   const generateVideo = async () => {
     if (!prompt) return;
     setLoading(true);
     setError(null);
     setVideoUrl(null);
+    setGeneratedCaption(null);
+    setPublishStatus({ tiktok: 'idle', instagram: 'idle', youtube: 'idle' });
+    
     try {
       const response = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, niche }),
+        body: JSON.stringify({ prompt, niche, publish: true }),
       });
       const data = await response.json();
       if (data.success) {
         setVideoUrl(data.videoUrl);
         setScenes(data.scenes);
+        setGeneratedCaption(data.caption);
       } else {
         setError(data.error || 'Failed to generate video');
       }
@@ -35,6 +54,63 @@ export default function VideoGenerator() {
       setLoading(false);
     }
   };
+
+  const publishToAll = async () => {
+    if (!videoUrl) return;
+
+    const fullMediaUrl = `${window.location.origin}${videoUrl}`;
+    const caption = generatedCaption || `Build the exit quietly. The Silent Architect is a blueprint for escaping burnout, pressure, and dependency — with strategy, not chaos. Link in bio. #${niche.toLowerCase()} #SilentArchitect #ToxicPremium #Success #Mindset #Ambition`;
+
+    const platforms: (keyof PlatformStatus)[] = ['tiktok', 'instagram', 'youtube'];
+    
+    // Set all to loading
+    setPublishStatus({
+      tiktok: 'loading',
+      instagram: 'loading',
+      youtube: 'loading'
+    });
+
+    const publishToPlatform = async (platform: keyof PlatformStatus) => {
+      try {
+        const response = await fetch('/api/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            platform,
+            content: caption,
+            mediaUrl: fullMediaUrl,
+            title: prompt // For YouTube
+          }),
+        });
+        
+        const data = await response.json();
+        setPublishStatus(prev => ({
+          ...prev,
+          [platform]: data.success ? 'success' : 'error'
+        }));
+      } catch (err) {
+        setPublishStatus(prev => ({
+          ...prev,
+          [platform]: 'error'
+        }));
+      }
+    };
+
+    // Publish to all simultaneously
+    await Promise.all(platforms.map(p => publishToPlatform(p)));
+  };
+
+  const getStatusIcon = (status: PublishStatus) => {
+    switch (status) {
+      case 'loading': return <Loader2 className="w-4 h-4 animate-spin text-toxic-gold" />;
+      case 'success': return <CheckCircle2 className="w-4 h-4 text-toxic-green" />;
+      case 'error': return <XCircle className="w-4 h-4 text-red-500" />;
+      default: return null;
+    }
+  };
+
+  const isPublishing = Object.values(publishStatus).some(s => s === 'loading');
+  const hasPublished = Object.values(publishStatus).some(s => s === 'success' || s === 'error');
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-8">
@@ -75,7 +151,7 @@ export default function VideoGenerator() {
 
             <button
               onClick={generateVideo}
-              disabled={loading || !prompt}
+              disabled={loading || !prompt || isPublishing}
               className="w-full py-4 bg-white text-black font-extrabold rounded-xl text-sm hover:bg-zinc-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-white/5"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
@@ -87,7 +163,38 @@ export default function VideoGenerator() {
             )}
           </div>
 
-          {scenes.length > 0 && (
+          {videoUrl && (
+            <div className="pt-6 border-t border-zinc-800 space-y-4">
+              <div className="p-4 rounded-xl bg-black/60 border border-zinc-800 space-y-2">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Target Caption</label>
+                <p className="text-zinc-400 text-xs italic leading-relaxed">
+                  {generatedCaption || "Build the exit quietly..."}
+                </p>
+              </div>
+
+              <button
+                onClick={publishToAll}
+                disabled={isPublishing}
+                className="w-full py-4 bg-toxic-gold text-black font-extrabold rounded-xl text-sm hover:bg-toxic-gold-light transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-toxic-gold/10"
+              >
+                {isPublishing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                {isPublishing ? 'PUBLISHING...' : 'PUBLISH TO ALL CHANNELS'}
+              </button>
+
+              {hasPublished && (
+                <div className="grid grid-cols-3 gap-2">
+                  {(['tiktok', 'instagram', 'youtube'] as const).map(p => (
+                    <div key={p} className="bg-black/40 border border-zinc-800 rounded-lg p-2 flex flex-col items-center gap-1">
+                      <span className="text-[9px] font-bold text-zinc-500 uppercase">{p}</span>
+                      {getStatusIcon(publishStatus[p]) || <span className="text-[10px] text-zinc-600">Pending</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {scenes.length > 0 && !videoUrl && (
             <div className="mt-8 space-y-4">
               <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Generated Storyboard</h4>
               <div className="space-y-3">

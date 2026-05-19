@@ -8,7 +8,7 @@ import * as googleTTS from 'google-tts-api';
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, niche = 'wealth' } = await req.json();
+    const { prompt, niche = 'wealth', publish = false } = await req.json();
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
@@ -125,10 +125,14 @@ export async function POST(req: NextRequest) {
       console.warn("Failed to cleanup temp dir:", tempDir);
     }
 
+    const caption = `Build the exit quietly. The Silent Architect is a blueprint for escaping burnout, pressure, and dependency — with strategy, not chaos. Link in bio. #${niche.toLowerCase()} #SilentArchitect #ToxicPremium #Success #Mindset #Ambition`;
+
     return NextResponse.json({ 
       success: true, 
       videoUrl: `/videos/${outputFileName}`,
-      scenes: scenes 
+      scenes: scenes,
+      caption: caption,
+      publishRequested: publish
     });
 
   } catch (error: any) {
