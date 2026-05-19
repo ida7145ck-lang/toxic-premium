@@ -97,7 +97,9 @@ export async function POST(req: NextRequest) {
     }
 
     const videoId = uuidv4();
-    const tempDir = path.join(process.cwd(), 'tmp', videoId);
+    // Use /tmp for serverless (Vercel), fallback to process.cwd()/tmp for local
+    const baseTmpDir = fs.existsSync('/tmp') ? '/tmp' : path.join(process.cwd(), 'tmp');
+    const tempDir = path.join(baseTmpDir, `video_${videoId}`);
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
