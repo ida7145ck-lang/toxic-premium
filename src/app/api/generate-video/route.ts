@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { geminiGenerateText } from '@/lib/ai/gemini';
-import ffmpeg from 'fluent-ffmpeg';
-import path from 'path';
-import fs from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import * as googleTTS from 'google-tts-api';
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, niche = 'wealth', publish = false } = await req.json();
+    const { prompt, niche = 'wealth' } = await req.json();
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
@@ -52,22 +48,17 @@ export async function POST(req: NextRequest) {
     
     let scenes;
     
-    // Robust JSON parsing with multiple fallback strategies
+    // Robust JSON parsing
     try {
-      // Strategy 1: Direct parse after removing markdown code blocks
       let cleanedJson = scriptText.replace(/```json\n?/gi, '').replace(/```\n?/gi, '').trim();
-      
-      // Try direct parse first
       try {
         scenes = JSON.parse(cleanedJson);
       } catch {
-        // Strategy 2: Find JSON array pattern with regex
         const jsonMatch = cleanedJson.match(/\[[\s\S]*?\]\s*$/);
         if (jsonMatch) {
           try {
             scenes = JSON.parse(jsonMatch[0]);
           } catch {
-            // Strategy 3: Try to find objects between brackets
             const objectsMatch = cleanedJson.match(/\{"[^}]*"\}/g);
             if (objectsMatch && objectsMatch.length >= 3) {
               scenes = objectsMatch.slice(0, 3).map(s => JSON.parse(s));
@@ -76,19 +67,14 @@ export async function POST(req: NextRequest) {
         }
       }
       
-      // Final fallback: If still no valid scenes, create a default script
       if (!scenes || !Array.isArray(scenes) || scenes.length === 0) {
-        console.warn("Could not parse Gemini response, using fallback script");
         scenes = [
           { narration: "Build your empire in silence.", visual: "A lone figure on a rooftop at night, city skyline, luxury and power, cinematic dark lighting" },
           { narration: "They underestimate the quiet ones.", visual: "A dark mansion with a single light on, storm clouds, mysterious and powerful" },
           { narration: "Your grind speaks louder than words.", visual: "A man working alone at desk, neon lights from window, determination and focus" }
         ];
       }
-      
     } catch (e) {
-      console.error("Failed to parse Gemini script as JSON:", e);
-      // Use fallback script
       scenes = [
         { narration: "Build your empire in silence.", visual: "A lone figure on a rooftop at night, city skyline, luxury and power, cinematic dark lighting" },
         { narration: "They underestimate the quiet ones.", visual: "A dark mansion with a single light on, storm clouds, mysterious and powerful" },
@@ -96,107 +82,27 @@ export async function POST(req: NextRequest) {
       ];
     }
 
-    const videoId = uuidv4();
-    // Use /tmp for serverless (Vercel), fallback to process.cwd()/tmp for local
-    const baseTmpDir = fs.existsSync('/tmp') ? '/tmp' : path.join(process.cwd(), 'tmp');
-    const tempDir = path.join(baseTmpDir, `video_${videoId}`);
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
-    const sceneFiles: string[] = [];
-
-    // 2. Process Scenes
-    for (let i = 0; i < scenes.length; i++) {
-      const scene = scenes[i];
-      const imagePath = path.join(tempDir, `image_${i}.jpg`);
-      const audioPath = path.join(tempDir, `audio_${i}.mp3`);
-      const sceneVideoPath = path.join(tempDir, `scene_${i}.mp4`);
-
-      // Generate Image (Pollinations)
+    // 2. Add URLs to scenes
+    const scenesWithUrls = scenes.map((scene: any) => {
       const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(scene.visual + " dark luxury, cinematic, 8k, highly detailed, vertical aspect ratio 9:16")}?width=720&height=1280&nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
-      const imgRes = await fetch(imageUrl);
-      const imgBuffer = await imgRes.arrayBuffer();
-      fs.writeFileSync(imagePath, Buffer.from(imgBuffer));
-
-      // Generate Audio (Google TTS)
       const audioUrl = googleTTS.getAudioUrl(scene.narration, {
         lang: 'en',
         slow: false,
         host: 'https://translate.google.com',
       });
-      const audioRes = await fetch(audioUrl);
-      const audioBuffer = await audioRes.arrayBuffer();
-      fs.writeFileSync(audioPath, Buffer.from(audioBuffer));
-
-      // Create video clip for scene
-      await new Promise((resolve, reject) => {
-        ffmpeg(imagePath)
-          .loop(5) 
-          .input(audioPath)
-          .videoCodec('libx264')
-          .audioCodec('aac')
-          .outputOptions([
-            '-tune stillimage',
-            '-pix_fmt yuv420p',
-            '-shortest',
-            '-vf scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280'
-          ])
-          .save(sceneVideoPath)
-          .on('end', resolve)
-          .on('error', (err) => {
-            console.error(`Error generating scene ${i}:`, err);
-            reject(err);
-          });
-      });
-
-      sceneFiles.push(sceneVideoPath);
-    }
-
-    // 3. Concatenate Scenes
-    const publicVideosDir = path.join(process.cwd(), 'public', 'videos');
-    if (!fs.existsSync(publicVideosDir)) {
-      fs.mkdirSync(publicVideosDir, { recursive: true });
-    }
-    
-    const outputFileName = `${videoId}.mp4`;
-    const outputVideoPath = path.join(publicVideosDir, outputFileName);
-    const listFilePath = path.join(tempDir, 'list.txt');
-    const listContent = sceneFiles.map(f => `file '${f}'`).join('\n');
-    fs.writeFileSync(listFilePath, listContent);
-
-    await new Promise((resolve, reject) => {
-      ffmpeg()
-        .input(listFilePath)
-        .inputOptions(['-f concat', '-safe 0'])
-        .outputOptions(['-c copy'])
-        .save(outputVideoPath)
-        .on('end', resolve)
-        .on('error', (err) => {
-          console.error("Error concatenating videos:", err);
-          reject(err);
-        });
+      return { ...scene, imageUrl, audioUrl };
     });
-
-    // Clean up temp directory
-    try {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    } catch (e) {
-      console.warn("Failed to cleanup temp dir:", tempDir);
-    }
 
     const caption = `Build the exit quietly. The Silent Architect is a blueprint for escaping burnout, pressure, and dependency — with strategy, not chaos. Link in bio. #${niche.toLowerCase()} #SilentArchitect #ToxicPremium #Success #Mindset #Ambition ${additionalHashtags}`;
 
     return NextResponse.json({ 
       success: true, 
-      videoUrl: `/videos/${outputFileName}`,
-      scenes: scenes,
-      caption: caption,
-      publishRequested: publish
+      scenes: scenesWithUrls,
+      caption: caption
     });
 
   } catch (error: any) {
-    console.error("Video generation failed:", error);
+    console.error("Script generation failed:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
