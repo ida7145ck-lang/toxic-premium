@@ -94,14 +94,15 @@ export default function VideoGenerator() {
         const formData = new FormData();
         formData.append('file', blob, 'video.webm');
         
-        // Use file.io for temporary public hosting (free, no key needed)
-        const uploadRes = await fetch('https://file.io', {
+        // Use tmpfiles.org for temporary public hosting (free, no key needed, allows multiple downloads)
+        const uploadRes = await fetch('https://tmpfiles.org/api/v1/upload', {
           method: 'POST',
           body: formData
         });
         const uploadData = await uploadRes.json();
-        if (uploadData.success) {
-          mediaUrlToPublish = uploadData.link;
+        if (uploadData.status === 'success') {
+          // Convert https://tmpfiles.org/XXXX/file.webm to https://tmpfiles.org/dl/XXXX/file.webm
+          mediaUrlToPublish = uploadData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
         } else {
           throw new Error('Failed to upload video for publishing');
         }
