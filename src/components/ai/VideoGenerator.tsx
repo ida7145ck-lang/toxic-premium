@@ -10,6 +10,7 @@ interface PlatformStatus {
   tiktok: PublishStatus;
   instagram: PublishStatus;
   youtube: PublishStatus;
+  facebook: PublishStatus;
 }
 
 export default function VideoGenerator() {
@@ -26,7 +27,8 @@ export default function VideoGenerator() {
   const [publishStatus, setPublishStatus] = useState<PlatformStatus>({
     tiktok: 'idle',
     instagram: 'idle',
-    youtube: 'idle'
+    youtube: 'idle',
+    facebook: 'idle'
   });
 
   // Handle video blob changes
@@ -52,7 +54,7 @@ export default function VideoGenerator() {
     setVideoUrl(null);
     setGeneratedCaption(null);
     setScenes([]);
-    setPublishStatus({ tiktok: 'idle', instagram: 'idle', youtube: 'idle' });
+    setPublishStatus({ tiktok: 'idle', instagram: 'idle', youtube: 'idle', facebook: 'idle' });
     
     try {
       // 1. Get script and assets from API
@@ -81,20 +83,25 @@ export default function VideoGenerator() {
   };
 
   const publishToAll = async () => {
-    if (!videoUrl) return;
+    if (!videoUrl && !videoBlob) {
+      setError('No video available to publish');
+      return;
+    }
 
-    let mediaUrlToPublish = videoUrl;
-    
     setPublishStatus({
       tiktok: 'loading',
       instagram: 'loading',
-      youtube: 'loading'
+      youtube: 'loading',
+      facebook: 'loading'
     });
 
     // Upload blob to tmpfiles.org for public URL
-    if (videoUrl.startsWith('blob:')) {
+    let mediaUrlToPublish = '';
+    
+    if (videoUrl?.startsWith('blob:') || videoBlob) {
       try {
-        const blob = await fetch(videoUrl).then(r => r.blob());
+        const blobUrl = videoUrl || URL.createObjectURL(videoBlob!);
+        const blob = await fetch(blobUrl).then(r => r.blob());
         const formData = new FormData();
         formData.append('file', blob, 'toxic-reel.webm');
         
@@ -106,14 +113,12 @@ export default function VideoGenerator() {
         
         if (uploadData.status === 'success' && uploadData.data?.url) {
           mediaUrlToPublish = uploadData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+          console.log('[Publish] Video uploaded to:', mediaUrlToPublish);
         } else {
-          throw new Error('Upload failed');
+          console.warn('[Publish] Upload failed, trying without media');
         }
       } catch (err) {
-        console.error('Upload error:', err);
-        setError('Failed to upload video for publishing. Please try downloading and posting manually.');
-        setPublishStatus({ tiktok: 'error', instagram: 'error', youtube: 'error' });
-        return;
+        console.error('[Publish] Upload error:', err);
       }
     }
 
@@ -122,27 +127,37 @@ export default function VideoGenerator() {
 
 #${niche.toLowerCase().replace(' ', '')} #SilentArchitect #ToxicPremium #Success #Mindset #Ambition`;
 
-    const platforms: (keyof PlatformStatus)[] = ['tiktok', 'instagram', 'youtube'];
+    // Publish to ALL 4 platforms
+    const platforms: (keyof PlatformStatus)[] = ['tiktok', 'instagram', 'youtube', 'facebook'];
 
     const publishToPlatform = async (platform: keyof PlatformStatus) => {
       try {
+        const body: any = {
+          platform,
+          content: caption,
+          title: prompt || 'Toxic Premium'
+        };
+        
+        // Only add mediaUrl if we have one (required for TikTok, IG, YouTube, FB video posts)
+        if (mediaUrlToPublish) {
+          body.mediaUrl = mediaUrlToPublish;
+        }
+        
         const response = await fetch('/api/publish', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            platform,
-            content: caption,
-            mediaUrl: mediaUrlToPublish,
-            title: prompt
-          }),
+          body: JSON.stringify(body),
         });
         
         const data = await response.json();
+        console.log(`[Publish] ${platform} result:`, data);
+        
         setPublishStatus(prev => ({
           ...prev,
           [platform]: data.success ? 'success' : 'error'
         }));
       } catch (err) {
+        console.error(`[Publish] ${platform} error:`, err);
         setPublishStatus(prev => ({
           ...prev,
           [platform]: 'error'
@@ -150,6 +165,7 @@ export default function VideoGenerator() {
       }
     };
 
+    // Publish to all simultaneously
     await Promise.all(platforms.map(p => publishToPlatform(p)));
   };
 
@@ -165,10 +181,12 @@ export default function VideoGenerator() {
   const isPublishing = Object.values(publishStatus).some(s => s === 'loading');
   const hasPublished = Object.values(publishStatus).some(s => s === 'success' || s === 'error');
   const isProcessing = loading || isAssembling;
+  const successfulCount = Object.values(publishStatus).filter(s => s === 'success').length;
 
   const getStatusMessage = () => {
     if (loading) return 'Generating script and AI images...';
     if (isAssembling) return `Assembling video (${assemblyProgress}%)...`;
+    if (isPublishing) return `Publishing to ${successfulCount > 0 ? `${successfulCount}/4` : 'socials'}...`;
     return '';
   };
 
@@ -228,7 +246,7 @@ export default function VideoGenerator() {
             )}
           </div>
 
-          {videoUrl && (
+          {(videoUrl || videoBlob) && (
             <div className="pt-6 border-t border-zinc-800 space-y-4">
               <div className="p-4 rounded-xl bg-black/60 border border-zinc-800 space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Caption (exact as specified)</label>
@@ -241,16 +259,16 @@ export default function VideoGenerator() {
 
               <button
                 onClick={publishToAll}
-                disabled={isPublishing || !videoUrl}
+                disabled={isPublishing || (!videoUrl && !videoBlob)}
                 className="w-full py-4 bg-gradient-to-r from-toxic-gold to-yellow-500 text-black font-extrabold rounded-xl text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-xl shadow-toxic-gold/20"
               >
                 {isPublishing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                {isPublishing ? 'PUBLISHING TO SOCIALS...' : 'PUBLISH TO ALL CHANNELS'}
+                {isPublishing ? getStatusMessage() : 'PUBLISH TO ALL 4 CHANNELS'}
               </button>
 
               {hasPublished && (
-                <div className="grid grid-cols-3 gap-2">
-                  {(['tiktok', 'instagram', 'youtube'] as const).map(p => (
+                <div className="grid grid-cols-4 gap-2">
+                  {(['tiktok', 'instagram', 'youtube', 'facebook'] as const).map(p => (
                     <div key={p} className="bg-black/40 border border-zinc-800 rounded-lg p-2 flex flex-col items-center gap-1">
                       <span className="text-[9px] font-bold text-zinc-500 uppercase">{p}</span>
                       {getStatusIcon(publishStatus[p]) || <span className="text-[10px] text-zinc-600">Pending</span>}
